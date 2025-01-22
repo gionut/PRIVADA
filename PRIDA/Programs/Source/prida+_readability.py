@@ -1,5 +1,4 @@
 ### Find a way to import mpc files as modules
-import time
 
 class ClientConnectionManager:
     def send_to_clients(self, start, end, values, whitelist):
@@ -88,8 +87,7 @@ def receive_data(ccm, N, M):
     ccm.close_connections(0, N)
     cv = sint.Matrix(N, M)
     d = sint.Matrix(N, M)
-    @for_range_opt(N)
-    def _(id):
+    for id in range(N):
         cv[id] = shares[id][:M]
         d[id] = shares[id][M:]
 
@@ -99,40 +97,34 @@ def preliminary_counting(cv, N, M):
     result = sint.Array(M)
     result.assign_all(0)
 
-    @for_range_opt(N)
-    def _(i):
-        @for_range_opt(M)
-        def _(j):
+    for i in range(N):
+        for j in range(M):
             result[j] += cv[i][j]
 
     return result
 
 def main():
-    N = 100 # Data Owners
+    N = 2000  # Data Owners
     M = 1 # Data Customers
     threshold = N//2+1
-    start = time.time()
     
     ccm = ClientConnectionManager(14000, N, M, 2)
 
-
     (cv, d) = receive_data(ccm, N, M)
+    time
     cv_total = preliminary_counting(cv, N, M).reveal_list()
-    whitelist = regint.Array(M).create_from([cv_j >= threshold for cv_j in cv_total])
-        
+    whitelist = [cv_j >= threshold for cv_j in cv_total]
+
     res = sint.Array(M)
     res.assign_all(0)
-    @for_range_opt(M)
-    def _(j):
+    for j in range(M):
         @if_(whitelist[j] == 1)
         def _():
-            @for_range_opt(N)
-            def _(i):
+            for i in range(N):
                 res[j] += d[i][j]
     
     ccm.send_to_clients(N, N+M, res, whitelist)
+    time
     ccm.close_connections(N, N+M)
-    end = time.time()
-    print_ln('Program Finished in %s seconds', end - start)
 
 main()
