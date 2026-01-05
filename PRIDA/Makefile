@@ -82,4 +82,4 @@ benchmark_prida+:
 
 
 	
-	
+docker run -d -it --name prida_plus --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
