@@ -11,7 +11,7 @@ client_id = int(sys.argv[1])
 n_parties = int(sys.argv[2])
 M = int(sys.argv[3])
 
-client = Client(['localhost'] * n_parties, 14000, client_id)
+client = Client(['0.0.0.0'] * n_parties, 14000, client_id)
 
 def run():
     M = 1

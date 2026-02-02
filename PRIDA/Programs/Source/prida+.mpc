@@ -1,6 +1,3 @@
-### Find a way to import mpc files as modules
-import time
-
 class ClientConnectionManager:
     def send_to_clients(self, start, end, values, whitelist):
         for i in range(start, end):
@@ -108,11 +105,10 @@ def preliminary_counting(cv, N, M):
     return result
 
 def main():
-    N = 100 # Data Owners
-    M = 1 # Data Customers
+    N = int(program.args[1]) # Data Owners
+    M = int(program.args[2]) # Data Customers
+
     threshold = N//2+1
-    start = time.time()
-    
     ccm = ClientConnectionManager(14000, N, M, 2)
 
 
@@ -132,7 +128,5 @@ def main():
     
     ccm.send_to_clients(N, N+M, res, whitelist)
     ccm.close_connections(N, N+M)
-    end = time.time()
-    print_ln('Program Finished in %s seconds', end - start)
 
 main()

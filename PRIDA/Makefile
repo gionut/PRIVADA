@@ -1,4 +1,6 @@
-compile: 
+PHONY: compile run run0 run1 test_receive_from_clients prida+_ssl prida+_compute prida+_clients benchmark_prida+ prida+_compute_docker prida+_clients_docker
+
+compile:
 	../MP-SPDZ/compile.py $(FILE)
 
 run:
@@ -23,13 +25,13 @@ test_receive_from_clients:
 	../MP-SPDZ/ExternalIO/data_customer.py 4 2 &
 	../MP-SPDZ/ExternalIO/data_customer.py 5 2
 
-N=100
-M=1
+N=1500
+M=100
 prida+_ssl:
 	../MP-SPDZ/Scripts/setup-ssl.sh 2
 	../MP-SPDZ/Scripts/setup-clients.sh $$(($(N)+$(M))) > /dev/null 2>&1
 
-prida+_compute:	
+prida+_compute:
 	@../MP-SPDZ/compile.py -l prida+
 	@../MP-SPDZ/Scripts/../spdz2k-party.x 1 prida+ -h localhost -N 2 &
 	@../MP-SPDZ/Scripts/../spdz2k-party.x 0 prida+ -h localhost -N 2 -v -t 2>&1 | tee ./benchmark/$(N)DO_$(M)DC_$(index).log &
@@ -64,22 +66,24 @@ benchmark_prida+:
 # 	../MP-SPDZ/Scripts/../spdz2k-party.x 1 prida+ -pn 12000 -h localhost -N 2 &
 # 	../MP-SPDZ/Scripts/../spdz2k-party.x 0 prida+ -pn 12001 -h localhost -N 2 -v & 
 
-# # prida+_compute_docker:
-# # 	docker exec prida_plus sh -c "./usr/src/MP-SPDZ/compile.py prida+"
-# # 	docker exec prida_plus sh -c "spdz2k-party.x 1 - pn 12501 prida+ -h localhost -N 2 -v" &
-# # 	docker exec prida_plus sh -c "spdz2k-party.x 0 - pn 12501 prida+ -h localhost -N 2 -v" &
+prida+_compute_docker:
+	docker exec prida_plus sh -c "./compile.py prida+ 10 1"
+	docker exec prida_plus sh -c "spdz2k-party.x 1 prida+ -h localhost -N 2 -v --batch-size $(N)" > logs_1.txt 2>&1 &
+	docker exec prida_plus sh -c "spdz2k-party.x 0 prida+ -h localhost -N 2 -v --batch-size $(N)" > logs_0.txt 2>&1 &
 
-# # prida+_clients_docker:
-# # 	for i in $(shell seq 0 $$(($(N)-1))); do \
-# # 		docker exec prida_plus sh -c "./ExternalIO/data_owner.py $$i 2 $(M)" & \
-# # 	done; \
-# # 	for i in $(shell seq 0 $$(($(M)-1))); do \
-# # 		docker exec prida_plus sh -c "./ExternalIO/data_customer.py $$(($(N)+$$i)) 2" & \
-# # 	done;
+prida+_clients_docker:
+	for i in $(shell seq 0 $$(($(N)-1))); do \
+		docker exec prida_plus sh -c "./ExternalIO/data_owner.py $$i 2 $(M)" & \
+	done; \
+	for i in $(shell seq 0 $$(($(M)-1))); do \
+		docker exec prida_plus sh -c "./ExternalIO/data_customer.py $$(($(N)+$$i)) 2" & \
+	done;
+
 
 # # 	sudo docker build --tag mpspdz:spdz2k-party --build-arg machine=spdz2k-party.x .
 # # 	sudo docker run -d -it --name prida_plus --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO mpspdz:spdz2k-party
 
 
 	
-docker run -d -it --name prida_plus --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
+# docker run -d -it --name prida_plus --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
+# docker exec prida_plus sh -c "Programs/Source/one_run.py -N 1000 -M 1 --batch-size 100 --timeout 60"
