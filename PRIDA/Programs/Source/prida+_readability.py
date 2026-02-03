@@ -1,90 +1,67 @@
 ### Find a way to import mpc files as modules
 
 class ClientConnectionManager:
-    def send_to_clients(self, start, end, values, whitelist):
-        for i in range(start, end):
-            self.send_to_client(self.client_sockets, regint(i), values[i-start])
-
-    def send_to_client(self, sockets, client_id, value):
-        """Send value to client"""
-
-        # Setup authenticate result using share of random.
-        # client can validate ∑ value * ∑ rnd_from_triple = ∑ auth_result
-        sint.reveal_to_clients(sockets.get(client_id), [value])
-
-    def __init__(self, PORTNUM, DO_NUMBER, DC_NUMBER, n_threads):
-        self.PORTNUM = PORTNUM
-        self.DO_NUMBER = DO_NUMBER
-        self.DC_NUMBER = DC_NUMBER
-        self.n_threads = n_threads
-
+    def send_to_clients(self, n_clients, values, portnum):
         # Start listening for client socket connections
-        listen_for_clients(self.PORTNUM)
-        print_ln('Listening for client connections on base port %s', PORTNUM)
+        listen_for_clients(portnum)
+        print_ln('Listening for output client connections on base port %s', portnum)
 
-        # Clients socket id (integer).
-        self.client_sockets = Array(self.DO_NUMBER + self.DC_NUMBER, regint)
-        # Number of clients
-        self.number_clients = MemValue(regint(0))
-        # Client ids to identity client
-        self.client_ids = Array(self.DO_NUMBER + self.DC_NUMBER, sint)
-        # Keep track of received inputs
-        self.seen = Array(self.DO_NUMBER + self.DC_NUMBER, regint)
+        self.seen = Array(n_clients, regint)
         self.seen.assign_all(0)
-
         # Loop round waiting for each client to connect
         @do_while
         def client_connections():
-            client_id = self._accept_client()
-            @if_(client_id >= self.DO_NUMBER + self.DC_NUMBER)
+            client_socket_id = accept_client_connection(portnum)
+            @if_(client_socket_id >= n_clients)
             def _():
                 print_ln('client id too high')
                 crash()
-            self.client_sockets[client_id] = client_id
-            self.client_ids[client_id] = client_id
-            self.seen[client_id] = 1
+            self.seen[client_socket_id] = 1
             
-            return (sum(self.seen) < self.DO_NUMBER + self.DC_NUMBER)
+            return (sum(self.seen) < n_clients)
+
+        @for_range(0, n_clients)
+        def _(i):
+            sint.reveal_to_clients(i, [values[i]])
         
-        self.number_clients.write(self.DO_NUMBER + self.DC_NUMBER)
-
-    def _accept_client(self):
-        client_socket_id = accept_client_connection(self.PORTNUM)
-        return client_socket_id
-    
-    def close_connections(self, start, end):
-        self._close_connections(start, end)
-
-    def _close_connections(self, start, end):
-        @for_range(start, end)
+        @for_range(0, n_clients)
         def _(i):
             closeclientconnection(i)
 
-    def client_input(self, t, size, client_socket_id):
-        """
-        Send share of size random values, receive input and deduce shares.
-        """
+    def receive_from_clients(self, t, n_clients, size, portnum):
+        client_values = t.Matrix(n_clients, size)
         
-        return t.receive_from_client(size, client_socket_id)
+        # Start listening for client socket connections
+        listen_for_clients(portnum)
+        print_ln('Listening for input client connections on base port %s', portnum)
 
-    def receive_from_clients(self, t, size):
-        # Clients secret input.
-        self.client_values = t.Matrix(self.DO_NUMBER, size)
-
-        @for_range_multithread(self.n_threads, 1, self.number_clients-self.DC_NUMBER)
-        def _(client_id):
-            self.client_values[client_id] = self.client_input(t, size, client_id)
+        # Start batching
+        self.seen = Array(n_clients, regint)
+        self.seen.assign_all(0)
+        # Loop round waiting for each client to connect
+        @do_while
+        def client_connections():
+            client_socket_id = accept_client_connection(portnum)
+            @if_(client_socket_id >= n_clients)
+            def _():
+                print_ln('client id too high')
+                crash()
+            self.seen[client_socket_id] = 1
+            
+            return (sum(self.seen) < n_clients)
+                
+        @for_range_multithread(n_threads=1, n_parallel=1, n_loops=n_clients)
+        def _(i):
+            client_values[i] = t.receive_from_client(size, i)
         
-        return self.client_values
+        @for_range(0, n_clients)
+        def _(i):
+            closeclientconnection(i)
 
-# Receive from Data Owners authenticated shares of their choices for Data Customer j 
-# if cv[i][j] = 1, then Data Owner i agrees to share data with Data Customer j
-# if cv[i][j] = 0, then Data Owner i does not want his data to be shared with Data Customer j
-# N - number of Data Owners
-# M - number of Data Customers
+        return client_values
+
 def receive_data(ccm, N, M):
-    shares = ccm.receive_from_clients(sint, 2*M)
-    ccm.close_connections(0, N)
+    shares = ccm.receive_from_clients(sint, N, 2*M, 14000)
     cv = sint.Matrix(N, M)
     d = sint.Matrix(N, M)
     for id in range(N):
@@ -104,14 +81,13 @@ def preliminary_counting(cv, N, M):
     return result
 
 def main():
-    N = 2000  # Data Owners
+    N = 10  # Data Owners
     M = 1 # Data Customers
     threshold = N//2+1
     
-    ccm = ClientConnectionManager(14000, N, M, 2)
+    ccm = ClientConnectionManager()
 
     (cv, d) = receive_data(ccm, N, M)
-    time
     cv_total = preliminary_counting(cv, N, M).reveal_list()
     whitelist = [cv_j >= threshold for cv_j in cv_total]
 
@@ -123,8 +99,5 @@ def main():
             for i in range(N):
                 res[j] += d[i][j]
     
-    ccm.send_to_clients(N, N+M, res, whitelist)
-    time
-    ccm.close_connections(N, N+M)
-
+    ccm.send_to_clients(M, res, 15000)
 main()
