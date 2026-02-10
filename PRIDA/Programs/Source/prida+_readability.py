@@ -28,7 +28,7 @@ class ClientConnectionManager:
         def _(i):
             closeclientconnection(i)
 
-    def receive_from_clients(self, t, n_clients, size, portnum, batch_size):
+    def receive_from_clients(self, t, n_clients, size, portnum, batch_size, n_threads):
         if batch_size is None:
             batch_size = n_clients
 
@@ -47,7 +47,8 @@ class ClientConnectionManager:
             
             self.seen = Array(actual_batch_size, regint)
             self.seen.assign_all(0)
-            # Loop round waiting for each client to connect
+            
+            # # Loop round waiting for each client to connect
             @do_while
             def client_connections():
                 client_socket_id = accept_client_connection(portnum)
@@ -59,20 +60,21 @@ class ClientConnectionManager:
                 
                 return (sum(self.seen) < actual_batch_size)
                     
-            @for_range_multithread(n_threads=1, n_parallel=1, n_loops=actual_batch_size)
+            @for_range_opt_multithread(n_threads=n_threads, n_loops=actual_batch_size)
             def _(offset):
                 idx = batch_start + offset
                 client_values[idx] = t.receive_from_client(size, idx)
             
-            @for_range(batch_start, batch_end)
+            @for_range(start=batch_start, stop=batch_end)
             def _(i):
                 closeclientconnection(i)
+            
             print_ln('Batch %s completed and connections closed', batch_idx)
 
         return client_values
 
-def receive_data(ccm, N, M, batch_size):
-    shares = ccm.receive_from_clients(sint, N, 2*M, 14000, batch_size)
+def receive_data(ccm, N, M, batch_size, n_threads):
+    shares = ccm.receive_from_clients(sint, N, 2*M, 14000, batch_size, n_threads)
     cv = sint.Matrix(N, M)
     d = sint.Matrix(N, M)
     for id in range(N):
@@ -95,11 +97,12 @@ def main():
     N = int(program.args[1]) # Data Owners
     M = int(program.args[2]) # Data Customers
     batch_size = int(program.args[3]) # Batch size for DO connections
+    n_threads = int(program.args[4])
     threshold = N//2+1
     
     ccm = ClientConnectionManager()
 
-    (cv, d) = receive_data(ccm, N, M, batch_size)
+    (cv, d) = receive_data(ccm, N, M, batch_size, n_threads)
     cv_total = preliminary_counting(cv, N, M).reveal_list()
     whitelist = [cv_j >= threshold for cv_j in cv_total]
 
@@ -113,5 +116,4 @@ def main():
     
     ccm.send_to_clients(M, res, 15000)
 
-    
 main()
