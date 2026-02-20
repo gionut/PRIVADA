@@ -33,7 +33,6 @@ class ClientConnectionManager:
             batch_size = n_clients
 
         client_values = t.Matrix(n_clients, size)
-        
         # Start listening for client socket connections
         listen_for_clients(portnum)
         print_ln('Listening for input client connections on base port %s', portnum)
@@ -59,7 +58,7 @@ class ClientConnectionManager:
                 self.seen[client_socket_id-batch_start] = 1
                 
                 return (sum(self.seen) < actual_batch_size)
-                    
+
             @for_range_opt_multithread(n_threads=n_threads, n_loops=actual_batch_size)
             def _(offset):
                 idx = batch_start + offset
@@ -68,7 +67,6 @@ class ClientConnectionManager:
             @for_range(start=batch_start, stop=batch_end)
             def _(i):
                 closeclientconnection(i)
-            
             print_ln('Batch %s completed and connections closed', batch_idx)
 
         return client_values
@@ -86,11 +84,9 @@ def receive_data(ccm, N, M, batch_size, n_threads):
 def preliminary_counting(cv, N, M):
     result = sint.Array(M)
     result.assign_all(0)
-
     for i in range(N):
         for j in range(M):
             result[j] += cv[i][j]
-
     return result
 
 def main():
@@ -101,19 +97,28 @@ def main():
     threshold = N//2+1
     
     ccm = ClientConnectionManager()
-
+    start_timer(1)
     (cv, d) = receive_data(ccm, N, M, batch_size, n_threads)
+    stop_timer(1)
+
+    start_timer(2)
     cv_total = preliminary_counting(cv, N, M).reveal_list()
+    stop_timer(2)
+
     whitelist = [cv_j >= threshold for cv_j in cv_total]
 
     res = sint.Array(M)
     res.assign_all(0)
+
+    start_timer(3)
     for j in range(M):
         @if_(whitelist[j] == 1)
         def _():
             for i in range(N):
                 res[j] += d[i][j]
-    
-    ccm.send_to_clients(M, res, 15000)
+    stop_timer(3)
 
+    start_timer(4)
+    ccm.send_to_clients(M, res, 15000)
+    stop_timer(4)
 main()

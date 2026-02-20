@@ -14,7 +14,6 @@ M = int(sys.argv[3])
 client = Client(['0.0.0.0'] * n_parties, 14000, client_id)
 
 def run():
-    M = 1
     cv = [1] * M
     d = [10] * M
     x = cv + d

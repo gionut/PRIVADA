@@ -1,80 +1,70 @@
 import time
 import json
 import argparse
+import os
+import docker
 
-
-def monitor_container_memory(interval, duration, output_file):
-    """
-    Monitor container memory usage and save to file.
-    
-    Args:
-        interval: Seconds between measurements
-        duration: Total seconds to monitor (None = run until interrupted)
-        output_file: File to save stats
-    """
-    start_time = time.time()
-    used_mb = 0
-    max_mem = 7620
-    initial_usage = 0
-    max_cpu_percent = 0
-    prev_cpu_usage = 0
-
+def monitor_container_memory(interval, duration, output_file, container_name):
+    client = docker.from_env()
     try:
-        # Open CPU cgroup files onc
-        mem_usage_file = open('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'r')
-        initial_usage = int(mem_usage_file.read().strip()) / (1024 ** 2)
+        container = client.containers.get(container_name)
+    except docker.errors.NotFound:
+        print(f"Error: Container '{container_name}' not found.")
+        return
 
-        # Open CPU cgroup files once
-        cpu_usage_file = open('/sys/fs/cgroup/cpuacct/cpuacct.usage', 'r')
-        
-        # Get initial CPU usage
-        cpu_usage_file.seek(0)
-        prev_cpu_usage = int(cpu_usage_file.read().strip())
-        prev_time = time.time()
-
-        while True:
+    stats_gen = container.stats(stream=True, decode=True)
+    mem_usage = mem_limit = 0
+    cpu_percent = 0
+    initial_rx = initial_tx = 0
+    prev_cpu_total = 0.0
+    prev_system_total = 0.0
+    online_cpus = 20
+    start_time = time.time()
+    try:
+        for stats in stats_gen:
             current_time = time.time()
-            # Get memory stats
-            mem_usage_file.seek(0)
-            current = int(mem_usage_file.read().strip()) / (1024 ** 2)
-            used_mb = max(used_mb, current)
-            
-            # Read CPU usage (in nanoseconds)
-            cpu_usage_file.seek(0)
-            current_cpu_usage = int(cpu_usage_file.read().strip())
-            
-            # Calculate CPU usage percentage
-            time_delta = current_time - prev_time
-            cpu_delta = current_cpu_usage - prev_cpu_usage
-            
-            if time_delta > 0:
-                # Convert nanoseconds to seconds and calculate percentage
-                cpu_percent = (cpu_delta / 1e9) / time_delta * 100
-                
-                if cpu_percent > max_cpu_percent:
-                    max_cpu_percent = cpu_percent
-                    max_cpu_timestamp = current_time
-            
-            prev_cpu_usage = current_cpu_usage
-            prev_time = current_time
-
-            if duration and (time.time() - start_time) >= duration:
+            if current_time - start_time > duration:
                 break
-                
-            time.sleep(interval)
-    finally:
-        # Close files
-        mem_usage_file.close()
-        cpu_usage_file.close()
 
-    used_mb -= initial_usage
-    percent = (used_mb / max_mem * 100) if max_mem != float('inf') else None
+           # --- CPU Calculation ---
+            cpu_stats = stats.get('cpu_stats', {})
+            # Use .get() to avoid KeyErrors if the dictionary is thin
+            cpu_usage = cpu_stats.get('cpu_usage', {})
+            
+            curr_cpu_total = cpu_usage.get('total_usage', 0)
+            curr_system_total = cpu_stats.get('system_cpu_usage', 0)
+            
+            # Calculate Deltas
+            cpu_delta = curr_cpu_total - prev_cpu_total
+            system_delta = curr_system_total - prev_system_total
+            if system_delta > 0.0 and cpu_delta > 0.0:
+                cpu_percent = max(cpu_percent, (cpu_delta / system_delta) * online_cpus * 100.0)
+            
+            # Update previous values for the next iteration
+            prev_cpu_total = curr_cpu_total
+            prev_system_total = curr_system_total
+
+            # --- Memory & Network (Standard) ---
+            crt_mem = stats['memory_stats'].get('usage', 0) / (1024 * 1024)
+            mem_usage = max(mem_usage, crt_mem)
+            networks = stats.get('networks', {})['eth0']
+            if initial_rx == 0:
+                initial_rx = networks['rx_bytes'] / 1024
+                initial_tx = networks['tx_bytes'] / 1024
+            
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        mem_limit = stats['memory_stats']['limit'] / (1024 * 1024)
+        rx, tx = networks['rx_bytes'] / 1024 - initial_rx, networks['tx_bytes'] / 1024 - initial_tx
+        stats_gen.close()
+
     stats = {
-        'mem_used_mb': used_mb,
-        'mem_percent': percent,
-        'limit_mb': max_mem,
-        'cpu_percent': max_cpu_percent,
-        'num_cpus': 20,
+        'mem_usage': mem_usage,
+        'mem_limit': mem_limit,
+        'cpu_percent': cpu_percent,
+        'rx_total': rx,
+        'tx_total': tx,
     }
     with open(output_file, 'a') as f:
         f.write(json.dumps(stats) + '\n')
@@ -86,5 +76,6 @@ if __name__ == "__main__":
     parser.add_argument('--duration', type=int, default=10, help='Monitoring duration')
     parser.add_argument('--interval', type=int, default=0.5, help='Interval interval')
     parser.add_argument('--file', default="logs/mem_usage.jsonl", help='Output File')
+    parser.add_argument('--container', default="", help='Container Name')
     args = parser.parse_args()
-    monitor_container_memory(interval=args.interval, duration=args.duration, output_file=args.file)
+    monitor_container_memory(interval=args.interval, duration=args.duration, output_file=args.file, container_name=args.container)

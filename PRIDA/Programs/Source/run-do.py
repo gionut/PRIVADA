@@ -17,7 +17,7 @@ def main():
     for batch_idx in range(n_batches):
         batch_start = batch_idx * DO_BATCH_SIZE
         batch_end = min(batch_start + DO_BATCH_SIZE, N)
-        do = [subprocess.Popen(f"./ExternalIO/data_owner.py {i} 2 {M}".split(), cwd="/usr/src/MP-SPDZ") for i in range(batch_start, batch_end)]
+        do = [subprocess.Popen(f"./ExternalIO/data_owner.py {i} 2 {M}", cwd="/usr/src/MP-SPDZ", shell=True) for i in range(batch_start, batch_end)]
         # Wait for DO batch to finish
         for i, c in enumerate(do):
             success = wait_with_timeout(c, CLIENT_TIMEOUT)

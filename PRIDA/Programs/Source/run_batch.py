@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import time
 
 def wait_with_timeout(process, timeout):
     """Wait for process with timeout, kill if exceeded"""
@@ -12,8 +13,11 @@ def wait_with_timeout(process, timeout):
         return False
 
 def main():
-    compile = subprocess.Popen(f"docker exec pridaservice sh -c \"./compile.py {PROG} -M -E spdz2k {N} {M} {DO_BATCH_SIZE} {N_THREADS}\"", shell=True)
-    compile.wait()
+    if COMPILE == 1:
+        compile = subprocess.Popen(f"docker exec pridaservice sh -c \"./compile.py {PROG} -M -E spdz2k {N} {M} {DO_BATCH_SIZE} {N_THREADS}\"", shell=True)
+        compile.wait()
+        time.sleep(5)
+
     for run_idx in range(TIMES):
         p = subprocess.Popen(f"""python Programs/Source/run-separate.py \
         -M {M} \
@@ -42,11 +46,11 @@ if __name__ == "__main__":
     parser.add_argument('--n-threads', type=int, default=1, help='number of threads')
     parser.add_argument('--log-dir', default="logs", help='log dir name')
     parser.add_argument('--times', type=int, default=10, help='number of executions')
+    parser.add_argument('--compile', type=int, default=1, help='compile the program')
 
     args = parser.parse_args()
     PROG = args.prog
     CLIENT_TIMEOUT = args.timeout
-    SERVER_TIMEOUT = 5
     N=args.N
     M=args.M
     BATCH_SIZE = args.batch_size
@@ -54,4 +58,5 @@ if __name__ == "__main__":
     TIMES = args.times
     N_THREADS = args.n_threads
     LOG_DIR = args.log_dir
+    COMPILE = args.compile
     main()
