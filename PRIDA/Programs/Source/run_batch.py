@@ -29,6 +29,7 @@ def main():
         --timeout {CLIENT_TIMEOUT} \
         --run {run_idx} \
         --n-threads {N_THREADS} \
+        --prob {PROB} \
         --log-dir {LOG_DIR}""", shell=True)
         wait_with_timeout(p, timeout=CLIENT_TIMEOUT+5)
     
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('--log-dir', default="logs", help='log dir name')
     parser.add_argument('--times', type=int, default=10, help='number of executions')
     parser.add_argument('--compile', type=int, default=1, help='compile the program')
+    parser.add_argument('--prob', type=int, choices=[50, 60, 90, 100], default=100, help='Probability distribution for the choice vector')
 
     args = parser.parse_args()
     PROG = args.prog
@@ -59,4 +61,5 @@ if __name__ == "__main__":
     N_THREADS = args.n_threads
     LOG_DIR = args.log_dir
     COMPILE = args.compile
+    PROB = args.prob
     main()

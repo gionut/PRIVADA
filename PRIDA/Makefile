@@ -10,8 +10,8 @@ PHONY: prida+_ssl prida+_compute prida+_clients benchmark_prida+ prida+_compute_
 # // Run evaluation in batches
 # python Programs/Source/run_batch.py -N 100 -M 1 --batch-size 500 --n-batch-size 700 --prog prida+_readability --timeout 10 --times 1 --n-threads 1 --log-dir logs
 
-N=1000
-M=1
+N=15000
+M=1000
 prida+_ssl:
 	../MP-SPDZ/Scripts/setup-ssl.sh 2
 	../MP-SPDZ/Scripts/setup-clients.sh $$(($(N)+$(M))) > /dev/null 2>&1
@@ -36,13 +36,13 @@ run_clients:
 
 pwd := $(CURDIR)
 create_containers:
-	mkdir logs
-	docker network create pridanet
+# 	mkdir logs
+# 	docker network create pridanet
 	docker run -d -it --name pridaservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
 	docker run -d -it --name doservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
 	docker run -d -it --name dcservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
 
 
-python parse_mem_files.py
-python average.py
-python plotting_mem.py
+# python parse_mem_files.py
+# python average.py
+# python plotting_mem.py
