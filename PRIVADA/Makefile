@@ -1,17 +1,5 @@
 PHONY: prida+_ssl prida+_compute prida+_clients benchmark_prida+ prida+_compute_docker prida+_clients_docker
 
-# // clone the repo including the submodules
-# > git submodule update --init --recursive
-# // follow the MP-SPDZ documentation to build the mpspdz:spdz2k-party docker image
-# > docker build --tag mpspdz:spdz2k-party --build-arg machine=spdz2k-party.x .
-# > cd PRIDA
-# > make prida+_ssl // This will create certificates for the communication between clients and parties. Careful about N. for 15000 it will take a long time
-# > cp Programs/Source/data_owner.py ../MP-SPDZ/ExternalIO/data_owner.py
-# > cp Programs/Source/data_customers.py ../MP-SPDZ/ExternalIO/data_customer.py
-# > make create_containers // Makes sure docker deamon is on
-# // Run evaluation in batches
-# > python Programs/Source/run_batch.py -N 100 -M 1 --batch-size 500 --n-batch-size 700 --prog prida+_readability --timeout 10 --times 1 --n-threads 1 --log-dir logs
-
 N=15000
 M=1000
 prida+_ssl:
@@ -38,8 +26,8 @@ run_clients:
 
 pwd := $(CURDIR)
 create_containers:
-	mkdir logs
-	docker network create pridanet
+# 	mkdir logs
+# 	docker network create pridanet
 	docker run -d -it --name pridaservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
 	docker run -d -it --name doservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party
 	docker run -d -it --name dcservice --network pridanet --mount type=bind,source="$(pwd)"/logs,target=/usr/src/MP-SPDZ/logs --mount type=bind,source="$(pwd)"/Programs/Source,target=/usr/src/MP-SPDZ/Programs/Source --mount type=bind,source="$(pwd)"/Player-Data,target=/usr/src/MP-SPDZ/Player-Data --mount type=bind,source="$(pwd)"/../MP-SPDZ/ExternalIO,target=/usr/src/MP-SPDZ/ExternalIO --mount type=bind,source="$(pwd)"/Programs/Schedules,target=/usr/src/MP-SPDZ/Programs/Schedules --mount type=bind,source="$(pwd)"/Programs/Bytecode,target=/usr/src/MP-SPDZ/Programs/Bytecode mpspdz:spdz2k-party

@@ -113,14 +113,18 @@ def main():
     stop_timer(1)
 
     start_timer(2)
-    cv_total = preliminary_counting(cv, N, M).reveal_list()
+    cv_total = preliminary_counting(cv, N, M)
     stop_timer(2)
-
+    
+    start_timer(5)
+    cv_total = cv_total.reveal_list()
+    stop_timer(5)
     whitelist = [cv_j >= threshold for cv_j in cv_total]
 
     res = sint.Array(M)
     res.assign_all(0)
 
+    # aggregation
     start_timer(3)
     for j in range(M):
         @if_(whitelist[j] == 1)

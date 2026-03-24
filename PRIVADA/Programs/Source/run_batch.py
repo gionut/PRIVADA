@@ -1,3 +1,6 @@
+"""
+Evaluation script to start batched evaluation. The default batch size is 10
+"""
 import argparse
 import subprocess
 import time

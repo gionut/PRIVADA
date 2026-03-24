@@ -1,3 +1,6 @@
+"""
+Gather Memory, CPU and Network stats from docker API
+"""
 import time
 import json
 import argparse
