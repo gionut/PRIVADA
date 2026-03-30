@@ -94,7 +94,7 @@ python Programs/Source/run_batch.py \
 - `-M 1`: Number of machines (M)
 - `--batch-size 500`: Batch size for processing
 - `--n-batch-size 700`: Batch size for N processing
-- `--prog prida+_readability`: Program to run
+- `--prog privada`: Program to run
 - `--timeout 10`: Timeout in seconds
 - `--times 1`: Number of iterations
 - `--n-threads 1`: Number of threads

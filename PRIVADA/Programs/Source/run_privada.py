@@ -28,7 +28,7 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluation framework for Prida+')
     parser.add_argument('--timeout', type=int, default=10, help='Timeout in seconds')
-    parser.add_argument('--prog', default="prida+", help='Program name')
+    parser.add_argument('--prog', default="privada", help='Program name')
     parser.add_argument('-N', type=int, default=10, help='Number of Data Owners')
     parser.add_argument('-M', type=int, default=1, help='Number of Data Customers')
     parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for preprocessing')
